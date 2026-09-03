@@ -26,6 +26,22 @@ export default function App() {
   const [sourceKind, setSourceKind] = useState('');
   const [params, setParams] = useState(() => structuredClone(DEFAULT_PARAMS));
   const [markZheda, setMarkZheda] = useState(true);
+  const [markMask, setMarkMask] = useState(1);
+  const maskAnimRef = useRef(0);
+
+  const playMaskAnim = useCallback(() => {
+    cancelAnimationFrame(maskAnimRef.current);
+    const dur = 600; // ms
+    const t0 = performance.now();
+    const tick = (t) => {
+      const k = Math.min(1, (t - t0) / dur);
+      setMarkMask(1 - Math.pow(1 - k, 3)); // ease-out
+      if (k < 1) maskAnimRef.current = requestAnimationFrame(tick);
+    };
+    setMarkMask(0);
+    maskAnimRef.current = requestAnimationFrame(tick);
+  }, []);
+  useEffect(() => () => cancelAnimationFrame(maskAnimRef.current), []);
   const objectUrlRef = useRef(null);
   const videoRef = useRef(null);
 
@@ -139,6 +155,11 @@ export default function App() {
           />
           高亮“浙大”二字（黄色块，screen 混合）
         </label>
+        <Slider label="进度" value={markMask} min={0} max={1} step={0.01}
+          onChange={setMarkMask} />
+        <div className="row-btns">
+          <button onClick={playMaskAnim} disabled={!markZheda}>播放滑入动画</button>
+        </div>
 
         <h2>暗角</h2>
         <Slider label="强度" value={p.vignette.amount} min={0} max={1} step={0.01}
@@ -157,7 +178,7 @@ export default function App() {
           focus={p.focus}
           moire={p.moire}
           vignette={p.vignette}
-          rects={markZheda ? [ZHEDA_RECT] : []}
+          rects={markZheda ? [{ ...ZHEDA_RECT, mask: markMask }] : []}
           onFocusChange={(focus) => set({ focus })}
         />
       </main>

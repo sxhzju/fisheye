@@ -13,8 +13,9 @@ export { DEFAULT_PARAMS };
  *  - moire: {intensity, scale, angle}
  *  - vignette: {amount, radius, softness}
  *  - rects: 标注矩形数组，默认 []（不加标注）。每项
- *      {x, y, w, h, color, opacity, blend}，坐标为源图 0..1（y 向下），
- *      blend: 'normal' | 'multiply' | 'screen' | 'lighten'
+ *      {x, y, w, h, color, opacity, blend, mask}，坐标为源图 0..1（y 向下），
+ *      blend: 'normal' | 'multiply' | 'screen' | 'lighten'，
+ *      mask: 0..1 从左到右滑入进度（动画用），默认 1 全显示
  *  - onFocusChange?: (focus) => void  在画面上点击/拖动时回调新的聚焦位置
  *  - style / className: 透传给 <canvas>
  */

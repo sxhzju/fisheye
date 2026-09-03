@@ -40,8 +40,11 @@ rects={[{
   color: '#ffd900',
   opacity: 0.9,
   blend: 'screen', // 'normal' | 'multiply' | 'screen' | 'lighten'
+  mask: 1,         // 0..1 从左到右滑入进度（动画用），默认 1 全显示
 }]}
 ```
+
+做滑入动画时逐帧把 `mask` 从 0 推到 1 即可（测试应用里的「播放滑入动画」按钮就是 600ms ease-out 的示例）。
 
 混合模式选择：深色底图 + 白字用 `screen`（暗部提成黄色、白字保持可读）；浅色底图 + 深字用 `multiply`（像荧光笔，白底变黄、黑字不变）。
 

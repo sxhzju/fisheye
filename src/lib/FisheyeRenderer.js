@@ -33,6 +33,7 @@ uniform int   uRectCount;
 uniform vec4  uRects[MAX_RECTS];      // x,y,w,h，源图 UV（gl 坐标，y 向上）
 uniform vec4  uRectColors[MAX_RECTS]; // rgb + opacity
 uniform float uRectBlends[MAX_RECTS]; // 0 normal / 1 multiply / 2 screen / 3 lighten
+uniform float uRectMasks[MAX_RECTS];  // 0..1 从左到右滑入进度
 
 void main() {
   // ---- 鱼眼畸变：以 uFocus 为中心的桶形畸变 ----
@@ -59,7 +60,7 @@ void main() {
     if (i >= uRectCount) break;
     vec4 rc = uRects[i];
     if (inside &&
-        suv.x >= rc.x && suv.x <= rc.x + rc.z &&
+        suv.x >= rc.x && suv.x <= rc.x + rc.z * uRectMasks[i] &&
         suv.y >= rc.y && suv.y <= rc.y + rc.w) {
       vec3 mark = uRectColors[i].rgb;
       float mode = uRectBlends[i];
@@ -112,7 +113,8 @@ export const DEFAULT_PARAMS = {
   // { x, y, w, h,          源图坐标 0..1（y 向下，与页面一致）
   //   color: '#ffe200',    CSS 十六进制颜色
   //   opacity: 1,
-  //   blend: 'multiply' }  'normal' | 'multiply' | 'screen' | 'lighten'
+  //   blend: 'multiply',   'normal' | 'multiply' | 'screen' | 'lighten'
+  //   mask: 1 }            0..1 从左到右滑入进度（动画用），默认 1 全显示
   rects: [],
 };
 
@@ -178,7 +180,7 @@ export class FisheyeRenderer {
       'uAspect', 'uFocus', 'uStrength', 'uZoom',
       'uMoireIntensity', 'uMoireScale', 'uMoireAngle',
       'uVignette', 'uVignetteRadius', 'uVignetteSoft',
-      'uRectCount', 'uRects[0]', 'uRectColors[0]', 'uRectBlends[0]',
+      'uRectCount', 'uRects[0]', 'uRectColors[0]', 'uRectBlends[0]', 'uRectMasks[0]',
     ]) {
       this.u[name.replace('[0]', '')] = gl.getUniformLocation(prog, name);
     }
@@ -258,16 +260,19 @@ export class FisheyeRenderer {
       const geo = new Float32Array(MAX_RECTS * 4);
       const cols = new Float32Array(MAX_RECTS * 4);
       const blends = new Float32Array(MAX_RECTS);
+      const masks = new Float32Array(MAX_RECTS);
       rects.forEach((r, i) => {
         // 页面坐标 y 向下 → gl 坐标 y 向上：矩形顶边 y 变为底边 1-(y+h)
         geo.set([r.x, 1 - r.y - r.h, r.w, r.h], i * 4);
         const [cr, cg, cb] = hexToRgb(r.color || '#ffe200');
         cols.set([cr, cg, cb, r.opacity ?? 1], i * 4);
         blends[i] = BLEND_MODES[r.blend] ?? BLEND_MODES.multiply;
+        masks[i] = Math.min(1, Math.max(0, r.mask ?? 1));
       });
       gl.uniform4fv(u.uRects, geo);
       gl.uniform4fv(u.uRectColors, cols);
       gl.uniform1fv(u.uRectBlends, blends);
+      gl.uniform1fv(u.uRectMasks, masks);
     }
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
