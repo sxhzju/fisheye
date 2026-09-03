@@ -28,6 +28,12 @@ uniform float uVignette;       // 暗角强度 0..1
 uniform float uVignetteRadius; // 暗角起始半径
 uniform float uVignetteSoft;   // 暗角过渡宽度
 
+#define MAX_RECTS 8
+uniform int   uRectCount;
+uniform vec4  uRects[MAX_RECTS];      // x,y,w,h，源图 UV（gl 坐标，y 向上）
+uniform vec4  uRectColors[MAX_RECTS]; // rgb + opacity
+uniform float uRectBlends[MAX_RECTS]; // 0 normal / 1 multiply / 2 screen / 3 lighten
+
 void main() {
   // ---- 鱼眼畸变：以 uFocus 为中心的桶形畸变 ----
   vec2 p = vUv - uFocus;
@@ -46,6 +52,24 @@ void main() {
     vec2 cuv = clamp(suv, 0.0, 1.0);
     float over = length(suv - cuv) * 12.0;
     col = texture2D(uTex, cuv).rgb * max(0.0, 1.0 - over);
+  }
+
+  // ---- 标注矩形：画在源图坐标上，随鱼眼一起弯曲，再被摩尔纹/暗角覆盖 ----
+  for (int i = 0; i < MAX_RECTS; i++) {
+    if (i >= uRectCount) break;
+    vec4 rc = uRects[i];
+    if (inside &&
+        suv.x >= rc.x && suv.x <= rc.x + rc.z &&
+        suv.y >= rc.y && suv.y <= rc.y + rc.w) {
+      vec3 mark = uRectColors[i].rgb;
+      float mode = uRectBlends[i];
+      vec3 blended;
+      if (mode < 0.5)      blended = mark;                                  // normal
+      else if (mode < 1.5) blended = col * mark;                            // multiply
+      else if (mode < 2.5) blended = 1.0 - (1.0 - col) * (1.0 - mark);      // screen
+      else                 blended = max(col, mark);                        // lighten
+      col = mix(col, blended, uRectColors[i].a);
+    }
   }
 
   // ---- 摩尔纹：源空间细扫描线 × 屏幕空间细扫描线 的干涉 ----
@@ -84,7 +108,21 @@ export const DEFAULT_PARAMS = {
     radius: 0.72,
     softness: 0.45,
   },
+  // 标注矩形，默认不加。每项：
+  // { x, y, w, h,          源图坐标 0..1（y 向下，与页面一致）
+  //   color: '#ffe200',    CSS 十六进制颜色
+  //   opacity: 1,
+  //   blend: 'multiply' }  'normal' | 'multiply' | 'screen' | 'lighten'
+  rects: [],
 };
+
+export const MAX_RECTS = 8;
+const BLEND_MODES = { normal: 0, multiply: 1, screen: 2, lighten: 3 };
+
+function hexToRgb(hex) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+}
 
 function compile(gl, type, src) {
   const sh = gl.createShader(type);
@@ -140,8 +178,9 @@ export class FisheyeRenderer {
       'uAspect', 'uFocus', 'uStrength', 'uZoom',
       'uMoireIntensity', 'uMoireScale', 'uMoireAngle',
       'uVignette', 'uVignetteRadius', 'uVignetteSoft',
+      'uRectCount', 'uRects[0]', 'uRectColors[0]', 'uRectBlends[0]',
     ]) {
-      this.u[name] = gl.getUniformLocation(prog, name);
+      this.u[name.replace('[0]', '')] = gl.getUniformLocation(prog, name);
     }
 
     this.source = null;
@@ -169,6 +208,7 @@ export class FisheyeRenderer {
       focus: { ...p.focus, ...(partial.focus || {}) },
       moire: { ...p.moire, ...(partial.moire || {}) },
       vignette: { ...p.vignette, ...(partial.vignette || {}) },
+      rects: partial.rects !== undefined ? partial.rects : p.rects,
     };
     if (!this.isVideo) this.render();
   }
@@ -211,6 +251,24 @@ export class FisheyeRenderer {
     gl.uniform1f(u.uVignette, p.vignette.amount);
     gl.uniform1f(u.uVignetteRadius, p.vignette.radius);
     gl.uniform1f(u.uVignetteSoft, p.vignette.softness);
+
+    const rects = (p.rects || []).slice(0, MAX_RECTS);
+    gl.uniform1i(u.uRectCount, rects.length);
+    if (rects.length) {
+      const geo = new Float32Array(MAX_RECTS * 4);
+      const cols = new Float32Array(MAX_RECTS * 4);
+      const blends = new Float32Array(MAX_RECTS);
+      rects.forEach((r, i) => {
+        // 页面坐标 y 向下 → gl 坐标 y 向上：矩形顶边 y 变为底边 1-(y+h)
+        geo.set([r.x, 1 - r.y - r.h, r.w, r.h], i * 4);
+        const [cr, cg, cb] = hexToRgb(r.color || '#ffe200');
+        cols.set([cr, cg, cb, r.opacity ?? 1], i * 4);
+        blends[i] = BLEND_MODES[r.blend] ?? BLEND_MODES.multiply;
+      });
+      gl.uniform4fv(u.uRects, geo);
+      gl.uniform4fv(u.uRectColors, cols);
+      gl.uniform1fv(u.uRectBlends, blends);
+    }
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 

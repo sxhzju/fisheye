@@ -12,6 +12,9 @@ export { DEFAULT_PARAMS };
  *  - focus: {x, y}  聚焦位置，0..1，页面坐标（y 向下）
  *  - moire: {intensity, scale, angle}
  *  - vignette: {amount, radius, softness}
+ *  - rects: 标注矩形数组，默认 []（不加标注）。每项
+ *      {x, y, w, h, color, opacity, blend}，坐标为源图 0..1（y 向下），
+ *      blend: 'normal' | 'multiply' | 'screen' | 'lighten'
  *  - onFocusChange?: (focus) => void  在画面上点击/拖动时回调新的聚焦位置
  *  - style / className: 透传给 <canvas>
  */
@@ -22,6 +25,7 @@ export default function FisheyeView({
   focus = DEFAULT_PARAMS.focus,
   moire = DEFAULT_PARAMS.moire,
   vignette = DEFAULT_PARAMS.vignette,
+  rects = DEFAULT_PARAMS.rects,
   onFocusChange,
   style,
   className,
@@ -47,8 +51,9 @@ export default function FisheyeView({
       focus: { ...focus },
       moire: { ...DEFAULT_PARAMS.moire, ...moire },
       vignette: { ...DEFAULT_PARAMS.vignette, ...vignette },
+      rects,
     });
-  }, [strength, zoom, focus, moire, vignette]);
+  }, [strength, zoom, focus, moire, vignette, rects]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

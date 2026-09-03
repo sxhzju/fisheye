@@ -51,6 +51,12 @@ body {
 .slider input { flex: 1; accent-color: #6a76ff; }
 .slider-value { width: 44px; flex: none; text-align: right; color: #9aa0ff; font-variant-numeric: tabular-nums; }
 
+.check {
+  display: flex; align-items: center; gap: 8px;
+  margin: 8px 0; font-size: 12px; color: #bbb; cursor: pointer;
+}
+.check input { accent-color: #6a76ff; }
+
 .stage {
   flex: 1;
   display: flex; align-items: center; justify-content: center;

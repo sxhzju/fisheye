@@ -25,9 +25,25 @@ import FisheyeView from './lib/FisheyeView.jsx';
   focus={{ x: 0.5, y: 0.5 }}   // 聚焦位置，0..1，页面坐标（y 向下）
   moire={{ intensity: 0.28, scale: 900, angle: 0 }}
   vignette={{ amount: 0.85, radius: 0.72, softness: 0.45 }}
+  rects={[]}                   // 标注矩形，默认不加；见下
   onFocusChange={(f) => ...}   // 传入后画面可点击/拖动改变聚焦位置
 />
 ```
+
+#### 标注矩形 `rects`
+
+在源图坐标上画色块标注，随鱼眼一起弯曲，并被摩尔纹/暗角覆盖，看起来像原图上就有的高亮。默认 `[]` 不加，最多 8 个：
+
+```js
+rects={[{
+  x: 0.27, y: 0.57, w: 0.08, h: 0.05, // 源图 0..1 坐标（y 向下）
+  color: '#ffd900',
+  opacity: 0.9,
+  blend: 'screen', // 'normal' | 'multiply' | 'screen' | 'lighten'
+}]}
+```
+
+混合模式选择：深色底图 + 白字用 `screen`（暗部提成黄色、白字保持可读）；浅色底图 + 深字用 `multiply`（像荧光笔，白底变黄、黑字不变）。
 
 ### `src/lib/FisheyeRenderer.js` — 与框架无关的 WebGL 渲染器
 

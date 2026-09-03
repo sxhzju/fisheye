@@ -14,10 +14,18 @@ function Slider({ label, value, min, max, step, onChange, fmt = (v) => v.toFixed
   );
 }
 
+// 测试图中「浙大通」的“浙大”两个字所在区域（源图 0..1 坐标）。
+// 底图是深灰气泡 + 白色文字，用 screen 混合：暗部被提成黄色块，白字保持可读。
+const ZHEDA_RECT = {
+  x: 0.272, y: 0.573, w: 0.082, h: 0.052,
+  color: '#ffd900', opacity: 0.9, blend: 'screen',
+};
+
 export default function App() {
   const [source, setSource] = useState(null);
   const [sourceKind, setSourceKind] = useState('');
   const [params, setParams] = useState(() => structuredClone(DEFAULT_PARAMS));
+  const [markZheda, setMarkZheda] = useState(true);
   const objectUrlRef = useRef(null);
   const videoRef = useRef(null);
 
@@ -123,6 +131,15 @@ export default function App() {
           fmt={(v) => (v * 180 / Math.PI).toFixed(0) + '°'}
           onChange={(v) => set({ moire: { angle: v } })} />
 
+        <h2>标注</h2>
+        <label className="check">
+          <input
+            type="checkbox" checked={markZheda}
+            onChange={(e) => setMarkZheda(e.target.checked)}
+          />
+          高亮“浙大”二字（黄色块，screen 混合）
+        </label>
+
         <h2>暗角</h2>
         <Slider label="强度" value={p.vignette.amount} min={0} max={1} step={0.01}
           onChange={(v) => set({ vignette: { amount: v } })} />
@@ -140,6 +157,7 @@ export default function App() {
           focus={p.focus}
           moire={p.moire}
           vignette={p.vignette}
+          rects={markZheda ? [ZHEDA_RECT] : []}
           onFocusChange={(focus) => set({ focus })}
         />
       </main>
