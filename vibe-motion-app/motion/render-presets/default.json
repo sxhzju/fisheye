@@ -1,0 +1,16 @@
+{
+  "imageSrc": "test.jpg",
+  "videoWidth": 1080,
+  "videoHeight": 1102,
+  "durationSeconds": 2,
+  "strength": 1.6,
+  "focusFrom": { "x": 0.5, "y": 0.5 },
+  "focusTo": { "x": 0.313, "y": 0.599 },
+  "zoomFrom": 2,
+  "zoomTo": 2,
+  "zoomDrift": 0,
+  "focusStartSec": 0,
+  "focusEndSec": 1.0,
+  "maskStartSec": 1.0,
+  "maskEndSec": 1.8
+}
