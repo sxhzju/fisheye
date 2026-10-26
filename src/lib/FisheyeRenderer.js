@@ -74,12 +74,16 @@ void main() {
   }
 
   // ---- 摩尔纹：源空间细扫描线 × 屏幕空间细扫描线 的干涉 ----
+  // 源线绕聚焦点抵消 zoom，保证聚焦处两组线频率只差一点（zoom=1 时就是 suv）。
+  // 不抵消的话 zoom>1 把源线放粗，拍纹在聚焦处又密又碎，宽条纹跑到外圈、弯曲方向与鱼眼相反。
+  vec2 muv = (suv - uFocus) * uZoom + uFocus;
   float s = sin(uMoireAngle), c = cos(uMoireAngle);
-  float srcCoord = -s * suv.x * uAspect + c * suv.y;  // 随画面一起弯曲的线
+  float srcCoord = -s * muv.x * uAspect + c * muv.y;  // 随画面一起弯曲的线
   float scrCoord = -s * vUv.x * uAspect + c * vUv.y;  // 固定的屏幕线
   float l1 = sin(srcCoord * uMoireScale);
-  float l2 = sin(scrCoord * uMoireScale * 1.045 + 1.3);
-  float beat = 0.5 + 0.5 * l1 * l2;                   // 干涉条纹
+  // 屏幕线略疏于源线：拍纹在聚焦处最宽，向外随桶形畸变变密、与画面同向外凸
+  float l2 = sin(scrCoord * uMoireScale * 0.955 + 1.3);
+  float beat = 0.5 - 0.5 * l1 * l2;                   // 干涉条纹：两组线重合处透光（亮），交错处遮光（暗）
   float fine = 0.5 + 0.5 * l1;                        // 细扫描线本体
   float moire = mix(fine, beat, 0.65);
   col *= 1.0 - uMoireIntensity * moire;
